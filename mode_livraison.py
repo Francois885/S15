@@ -83,14 +83,15 @@ class LivraisonStandard(ModeLivraison):
 
     def cout(self, poids_kg):
         """Coût = part fixe + part proportionnelle au poids.
-
+        
         Pensez à valider le poids via self._valider_poids(poids_kg).
         """
-        raise NotImplementedError  # À COMPLÉTER
+        self._valider_poids(poids_kg)
+        return self.TARIF_BASE + self.TARIF_PAR_KG * poids_kg
 
     def delai_estime(self):
         """Délai fixe de la livraison standard."""
-        raise NotImplementedError  # À COMPLÉTER
+        return self.DELAI_JOURS
 
 
 class LivraisonExpress(ModeLivraison):
@@ -108,10 +109,30 @@ class LivraisonExpress(ModeLivraison):
     Attributes:
         supplement (float): Supplément express en euros (lecture seule).
     """
-
     TARIF_BASE = 4.99
     TARIF_PAR_KG = 1.50
     DELAI_JOURS = 1
+
+    def __init__(self, supplement=10.0):
+        super().__init__()
+        if not isinstance(supplement, float) or isinstance(supplement, bool):
+            raise TypeError("Doit etre un nombre entier.")
+        if supplement < 0:
+            raise ValueError("doit etre plus grand que 0.")
+        
+        self._supplement = supplement
+
+    @property
+    def supplement(self):
+        return self._supplement
+    
+    def cout(self, poids_kg):
+        self._valider_poids(poids_kg)
+        return self.TARIF_BASE + self.TARIF_PAR_KG * poids_kg + self.supplement
+
+    def delai_estime(self):
+        """Délai fixe de la livraison standard."""
+        return self.DELAI_JOURS    
 
     # À COMPLÉTER : __init__, property supplement, cout, delai_estime
 
@@ -132,6 +153,26 @@ class PointRelais(ModeLivraison):
     TARIF_FORFAIT = 3.50
     DELAI_JOURS = 4
 
+    def __init__(self, nom_reseau):
+        super().__init__()
+        if not isinstance(nom_reseau, str):
+            raise TypeError("Doit etre une chaine.")
+        if not nom_reseau.strip():
+            raise ValueError("La chaine est vide.") 
+        self._non_reseau = nom_reseau
+
+    @property
+    def nom_reseau(self):
+        return self._non_reseau  
+
+    def cout(self, poids_kg):
+        self._valider_poids(poids_kg)
+        return self.TARIF_FORFAIT
+
+    def delai_estime(self):
+        """Délai fixe de la livraison standard."""
+        return self.DELAI_JOURS  
+    
     # À COMPLÉTER : __init__, property nom_reseau, cout, delai_estime
 
 
@@ -143,7 +184,14 @@ class RetraitMagasin:
     acceptée par le client polymorphe. Le retrait est gratuit et
     immédiat. Validez le poids comme les autres modes.
     """
+    def cout(self, poids_kg):
+        """Calcule le coût de la livraison en euros pour un colis donné."""
+        ModeLivraison._valider_poids(poids_kg)
+        return 0.0
 
+    def delai_estime(self):
+        """Délai fixe de la livraison standard."""
+        return 0  
     # À COMPLÉTER : cout, delai_estime (sans hériter de ModeLivraison)
 
 
@@ -162,12 +210,22 @@ def comparer_livraisons(modes, poids_kg):
     Returns:
         str: Un tableau textuel, une ligne par mode.
     """
-    raise NotImplementedError  # À COMPLÉTER
+   
+    tab = []
+
+    for i in modes:
+        tab.append(
+            f"{type(i).__name__} : "
+            f"{i.cout(poids_kg):.2f} EUR en "
+            f"{i.delai_estime()} jour(s)")
+    return "\n".join(tab)
 
 
 if __name__ == "__main__":
-    # Décommentez au fur et à mesure de votre avancement.
-    # modes = [LivraisonStandard(), LivraisonExpress(), PointRelais("RelaisColis")]
-    # for mode in modes:
-    #     print(mode.recapitulatif(2.5))
-    pass
+    #Décommentez au fur et à mesure de votre avancement.
+    modes = [LivraisonStandard(), LivraisonExpress(), PointRelais("RelaisColis")]
+    for mode in modes:
+         print(mode.recapitulatif(2.5))
+    print()
+    modes = [LivraisonStandard(), LivraisonExpress(), PointRelais("RelaisColis"), RetraitMagasin()]
+    print(comparer_livraisons(modes, 2.5))
